@@ -5,6 +5,7 @@ const mockGenerateText = vi.fn();
 vi.mock("ai", () => ({
   generateText: (...args: unknown[]) => mockGenerateText(...args),
   tool: vi.fn((config) => config),
+  stepCountIs: vi.fn((n: number) => ({ type: "stepCount", count: n })),
 }));
 
 import { buildExplorerTools, runExplorationAgent } from "@/core/explorer.js";

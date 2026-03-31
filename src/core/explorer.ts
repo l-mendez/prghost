@@ -1,5 +1,5 @@
 // src/core/explorer.ts
-import { generateText, tool } from "ai";
+import { generateText, tool, stepCountIs } from "ai";
 import type { LanguageModel } from "ai";
 import type { Page } from "playwright";
 import { z } from "zod";
@@ -18,8 +18,9 @@ export function buildExplorerTools(page: Page) {
   const tools = {
     navigate: tool({
       description: "Navigate to a URL. Returns the page title and final URL after load.",
-      parameters: z.object({ url: z.string().describe("URL to navigate to") }),
-      execute: async ({ url }) => {
+      inputSchema: z.object({ url: z.string().describe("URL to navigate to") }),
+      execute: async (input) => {
+        const { url } = input;
         try {
           await page.goto(url, { waitUntil: "networkidle", timeout: 15000 });
           const title = await page.title();
@@ -34,10 +35,11 @@ export function buildExplorerTools(page: Page) {
 
     inspectDOM: tool({
       description: "Get a simplified DOM tree. Returns interactive elements, text, structure.",
-      parameters: z.object({
+      inputSchema: z.object({
         selector: z.string().optional().describe("Optional CSS selector to scope inspection"),
       }),
-      execute: async ({ selector }) => {
+      execute: async (input) => {
+        const { selector } = input;
         try {
           const result = await page.evaluate((sel) => {
             function simplify(el: Element, depth: number = 0): string {
@@ -70,7 +72,7 @@ export function buildExplorerTools(page: Page) {
 
     getInteractiveElements: tool({
       description: "Get all interactive elements on the current page with their selectors and labels.",
-      parameters: z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         try {
           const elements = await page.evaluate(() => {
@@ -109,10 +111,11 @@ export function buildExplorerTools(page: Page) {
 
     screenshot: tool({
       description: "Take a screenshot of the current page.",
-      parameters: z.object({
+      inputSchema: z.object({
         fullPage: z.boolean().optional().describe("Capture full page or just viewport"),
       }),
-      execute: async ({ fullPage }) => {
+      execute: async (input) => {
+        const { fullPage } = input;
         try {
           const buffer = await page.screenshot({ fullPage: fullPage ?? false });
           const base64 = buffer.toString("base64");
@@ -128,12 +131,13 @@ export function buildExplorerTools(page: Page) {
 
     tryInteraction: tool({
       description: "Try an interaction and report what changed.",
-      parameters: z.object({
+      inputSchema: z.object({
         action: z.enum(["click", "type", "hover"]),
         selector: z.string(),
         text: z.string().optional().describe("Text to type (for type action only)"),
       }),
-      execute: async ({ action, selector, text }) => {
+      execute: async (input) => {
+        const { action, selector, text } = input;
         try {
           const beforeUrl = page.url();
           const beforeHTML = await page.evaluate(() => document.body.innerHTML.length);
@@ -163,12 +167,13 @@ export function buildExplorerTools(page: Page) {
 
     reportFinding: tool({
       description: "Record a discovery worth including in the walkthrough.",
-      parameters: z.object({
+      inputSchema: z.object({
         description: z.string(),
         page: z.string(),
         relevantSelectors: z.array(z.string()),
       }),
-      execute: async ({ description, page: pageUrl, relevantSelectors }) => {
+      execute: async (input) => {
+        const { description, page: pageUrl, relevantSelectors } = input;
         findings.push({ description, page: pageUrl, relevantSelectors });
         return { success: true, recorded: true };
       },
@@ -197,7 +202,7 @@ export async function runExplorationAgent(
   const { text } = await generateText({
     model,
     tools,
-    maxSteps,
+    stopWhen: stepCountIs(maxSteps),
     system: prompt,
     prompt: "Begin exploring the application. Start by navigating to the most important affected route and systematically document what you find.",
   });
