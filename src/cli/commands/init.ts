@@ -1,7 +1,8 @@
 import { Command } from "commander";
+import { runInit } from "./init-handler.js";
 
 export const initCommand = new Command("init")
   .description("Generate a pr-ghost config file for this project")
   .action(async () => {
-    console.log("Init command not yet implemented.");
+    await runInit();
   });

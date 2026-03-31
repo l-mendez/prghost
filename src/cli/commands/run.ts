@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { runFullPipeline } from "./run-handler.js";
 
 export const runCommand = new Command("run")
   .description("Full pipeline: analyze diff → generate script → review → record video")
@@ -10,5 +11,5 @@ export const runCommand = new Command("run")
   .option("--no-review", "Skip interactive script review (CI mode)")
   .option("--script-only", "Stop after script generation")
   .action(async (options) => {
-    console.log("Run command not yet implemented. Options:", options);
+    await runFullPipeline(options);
   });
