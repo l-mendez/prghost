@@ -1,9 +1,8 @@
-import { generateObject } from "ai";
-import type { LanguageModel } from "ai";
 import { createInterface } from "readline";
 import chalk from "chalk";
 import { walkthroughScriptSchema } from "../ai/parsers.js";
 import { buildScriptEditPrompt } from "../ai/prompts/script-edit.js";
+import type { AIClient } from "../ai/client.js";
 import type { WalkthroughScript } from "../types/index.js";
 
 export function formatScriptForDisplay(script: WalkthroughScript): string {
@@ -58,14 +57,13 @@ export function formatScriptForDisplay(script: WalkthroughScript): string {
 }
 
 export async function applyNaturalLanguageEdit(
-  model: LanguageModel,
+  client: AIClient,
   script: WalkthroughScript,
   stepNumber: number | "all",
   instruction: string,
 ): Promise<WalkthroughScript> {
   const prompt = buildScriptEditPrompt(script, stepNumber, instruction);
-  const { object } = await generateObject({ model, schema: walkthroughScriptSchema, prompt });
-  return object;
+  return client.generateObject({ prompt, schema: walkthroughScriptSchema });
 }
 
 function askQuestion(rl: ReturnType<typeof createInterface>, question: string): Promise<string> {
@@ -78,7 +76,7 @@ export type ReviewResult =
   | { action: "quit"; script: WalkthroughScript };
 
 export async function reviewScript(
-  model: LanguageModel,
+  client: AIClient,
   script: WalkthroughScript,
 ): Promise<ReviewResult> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -105,7 +103,7 @@ export async function reviewScript(
           const instruction = await askQuestion(rl, "Describe the change: ");
           if (!instruction.trim()) continue;
           console.log(chalk.dim("Applying edit..."));
-          currentScript = await applyNaturalLanguageEdit(model, currentScript, stepNum, instruction.trim());
+          currentScript = await applyNaturalLanguageEdit(client, currentScript, stepNum, instruction.trim());
           break;
         }
         case "r": case "regenerate":

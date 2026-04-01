@@ -99,8 +99,8 @@ export const configSchema = z.object({
     .default({}),
   ai: z
     .object({
-      provider: z.enum(["openai", "anthropic", "google"]).default("openai"),
-      model: z.string().default("gpt-4o"),
+      provider: z.enum(["claude-code", "openai", "anthropic", "google"]).default("claude-code"),
+      model: z.string().default("claude-opus-4-6"),
       maxExplorationSteps: z.number().default(20),
     })
     .default({}),

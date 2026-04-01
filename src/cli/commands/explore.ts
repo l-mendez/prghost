@@ -3,7 +3,7 @@ import chalk from "chalk";
 import ora from "ora";
 import { writeFile } from "fs/promises";
 import { loadConfig } from "../../config/schema.js";
-import { createModel } from "../../ai/provider.js";
+import { createAIClient } from "../../ai/provider.js";
 import { analyzeDiffFromGit } from "../../core/diff-analyzer.js";
 import { fetchPRDiff, fetchPRMetadata } from "../../core/github.js";
 import { generateUXMap } from "../../core/ux-mapper.js";
@@ -29,7 +29,7 @@ export const exploreCommand = new Command("explore")
     const baseUrl = options.baseUrl ?? config.baseUrl;
     const outputPath = options.output ?? "./walkthrough.json";
 
-    const model = await createModel(config);
+    const client = await createAIClient(config);
     let devServerProcess: ChildProcess | undefined;
 
     try {
@@ -67,7 +67,7 @@ export const exploreCommand = new Command("explore")
 
       // Generate UX map
       spinner = ora("Mapping code changes to UX impact...").start();
-      const uxMap = await generateUXMap(diff, model);
+      const uxMap = await generateUXMap(diff, client);
       spinner.succeed(`Found ${uxMap.affectedRoutes.length} affected routes, ${uxMap.behaviorChanges.length} behavior changes`);
 
       // AI exploration
@@ -76,7 +76,7 @@ export const exploreCommand = new Command("explore")
       const context = await browser.newContext({ viewport: config.video.viewport });
       const explorerPage = await context.newPage();
 
-      const recon = await runExplorationAgent(model, explorerPage, diff, uxMap, config.ai.maxExplorationSteps);
+      const recon = await runExplorationAgent(client, explorerPage, diff, uxMap, config.ai.maxExplorationSteps);
 
       await context.close();
       await browser.close();
@@ -84,7 +84,7 @@ export const exploreCommand = new Command("explore")
 
       // Generate walkthrough script
       spinner = ora("Generating walkthrough script...").start();
-      const script = await generateWalkthroughScript(model, recon, diff, {
+      const script = await generateWalkthroughScript(client, recon, diff, {
         baseUrl, viewport: config.video.viewport, prMeta,
       });
       spinner.succeed(`Generated script with ${script.steps.length} steps`);

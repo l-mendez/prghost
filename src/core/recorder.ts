@@ -4,6 +4,29 @@ import { ActionExecutor } from "../browser/actions.js";
 import { TimingProfile } from "../browser/timing.js";
 import type { WalkthroughScript, PrGhostConfig, RecordingResult, StepTimestamp } from "../types/index.js";
 
+async function getAuthStorageState(config: PrGhostConfig, baseUrl: string) {
+  if (!config.auth?.steps?.length) return undefined;
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  const cursor = new GhostCursorController();
+  await cursor.init(page);
+  const executor = new ActionExecutor(page, cursor, new TimingProfile(config.timing), config.selectors.priority);
+
+  for (const step of config.auth.steps) {
+    await executor.execute(step, baseUrl);
+  }
+
+  // Wait for auth to settle (redirect + session cookie written)
+  await page.waitForLoadState("networkidle").catch(() => {});
+
+  const state = await context.storageState();
+  await browser.close();
+  return state;
+}
+
 export async function recordWalkthrough(
   script: WalkthroughScript,
   config: PrGhostConfig,
@@ -12,10 +35,14 @@ export async function recordWalkthrough(
   const videoDir = outputDir ?? process.cwd();
   const { viewport } = script.metadata;
 
+  // Authenticate in a hidden context before recording starts
+  const storageState = await getAuthStorageState(config, script.metadata.baseUrl);
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport,
     recordVideo: { dir: videoDir, size: viewport },
+    ...(storageState ? { storageState } : {}),
   });
   const page = await context.newPage();
 
@@ -24,15 +51,6 @@ export async function recordWalkthrough(
 
   const timing = new TimingProfile(config.timing);
   const executor = new ActionExecutor(page, cursor, timing, config.selectors.priority);
-
-  // Execute auth steps if configured
-  if (config.auth?.steps) {
-    for (const step of config.auth.steps) {
-      await executor.execute(step, script.metadata.baseUrl);
-    }
-  }
-
-  executor.resetTimer();
 
   const timestamps: StepTimestamp[] = [];
   const skippedSteps: number[] = [];

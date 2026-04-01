@@ -26,19 +26,6 @@ export function buildAnnotationFilter(timestamps: StepTimestamp[]): string {
   return filters.join(",");
 }
 
-function buildSectionFilter(timestamps: StepTimestamp[]): string {
-  const sections = timestamps.filter((t) => t.action === "section");
-  if (sections.length === 0) return "";
-
-  const filters = sections.map((t) => {
-    const startSec = t.timestampMs / 1000;
-    const endSec = startSec + 1.5;
-    const text = (t.annotation ?? "Section").replace(/'/g, "\u2019").replace(/:/g, "\\:");
-    return `drawtext=text='${text}':fontsize=36:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:box=1:boxcolor=black@0.8:boxborderw=20:enable='between(t,${startSec},${endSec})'`;
-  });
-
-  return filters.join(",");
-}
 
 export interface ProcessingOptions {
   introText?: string;
@@ -59,9 +46,7 @@ export async function processVideo(
     return recording.videoPath;
   }
 
-  const annotationFilter = buildAnnotationFilter(recording.timestamps);
-  const sectionFilter = buildSectionFilter(recording.timestamps);
-  const allFilters = [annotationFilter, sectionFilter].filter(Boolean).join(",");
+  const allFilters = buildAnnotationFilter(recording.timestamps);
 
   return new Promise((resolve, reject) => {
     let command = ffmpeg(recording.videoPath)

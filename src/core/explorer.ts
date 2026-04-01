@@ -1,22 +1,21 @@
 // src/core/explorer.ts
-import { generateText, tool, stepCountIs } from "ai";
-import type { LanguageModel } from "ai";
 import type { Page } from "playwright";
 import { z } from "zod";
 import { buildExplorationPrompt } from "../ai/prompts/exploration.js";
+import type { AIClient, ExplorerToolDef } from "../ai/client.js";
 import type {
   DiffAnalysis, UXMap, ReconReport,
   PageVisit, DiscoveredElement, ObservedBehavior, ReconFinding,
 } from "../types/index.js";
 
-export function buildExplorerTools(page: Page) {
+export function buildExplorerTools(page: Page): Record<string, ExplorerToolDef> & { _getReport: () => Omit<ReconReport, "recommendedFlow"> } {
   const pagesVisited: PageVisit[] = [];
   const interactiveElements: DiscoveredElement[] = [];
   const observedBehaviors: ObservedBehavior[] = [];
   const findings: ReconFinding[] = [];
 
-  const tools = {
-    navigate: tool({
+  const tools: Record<string, ExplorerToolDef> = {
+    navigate: {
       description: "Navigate to a URL. Returns the page title and final URL after load.",
       inputSchema: z.object({ url: z.string().describe("URL to navigate to") }),
       execute: async (input) => {
@@ -31,9 +30,9 @@ export function buildExplorerTools(page: Page) {
           return { success: false, error: String(error) };
         }
       },
-    }),
+    },
 
-    inspectDOM: tool({
+    inspectDOM: {
       description: "Get a simplified DOM tree. Returns interactive elements, text, structure.",
       inputSchema: z.object({
         selector: z.string().optional().describe("Optional CSS selector to scope inspection"),
@@ -68,9 +67,9 @@ export function buildExplorerTools(page: Page) {
           return { success: false, error: String(error) };
         }
       },
-    }),
+    },
 
-    getInteractiveElements: tool({
+    getInteractiveElements: {
       description: "Get all interactive elements on the current page with their selectors and labels.",
       inputSchema: z.object({}),
       execute: async () => {
@@ -107,9 +106,9 @@ export function buildExplorerTools(page: Page) {
           return { success: false, error: String(error) };
         }
       },
-    }),
+    },
 
-    screenshot: tool({
+    screenshot: {
       description: "Take a screenshot of the current page.",
       inputSchema: z.object({
         fullPage: z.boolean().optional().describe("Capture full page or just viewport"),
@@ -127,9 +126,9 @@ export function buildExplorerTools(page: Page) {
           return { success: false, error: String(error) };
         }
       },
-    }),
+    },
 
-    tryInteraction: tool({
+    tryInteraction: {
       description: "Try an interaction and report what changed.",
       inputSchema: z.object({
         action: z.enum(["click", "type", "hover"]),
@@ -163,9 +162,9 @@ export function buildExplorerTools(page: Page) {
           return { success: false, error: String(error) };
         }
       },
-    }),
+    },
 
-    reportFinding: tool({
+    reportFinding: {
       description: "Record a discovery worth including in the walkthrough.",
       inputSchema: z.object({
         description: z.string(),
@@ -177,7 +176,7 @@ export function buildExplorerTools(page: Page) {
         findings.push({ description, page: pageUrl, relevantSelectors });
         return { success: true, recorded: true };
       },
-    }),
+    },
   };
 
   return Object.assign(tools, {
@@ -188,7 +187,7 @@ export function buildExplorerTools(page: Page) {
 }
 
 export async function runExplorationAgent(
-  model: LanguageModel,
+  client: AIClient,
   page: Page,
   diff: DiffAnalysis,
   uxMap: UXMap,
@@ -197,15 +196,10 @@ export async function runExplorationAgent(
   const toolsWithReport = buildExplorerTools(page);
   const { _getReport, ...tools } = toolsWithReport;
 
-  const prompt = buildExplorationPrompt(diff, uxMap);
+  const system = buildExplorationPrompt(diff, uxMap);
+  const prompt = "Begin exploring the application. Start by navigating to the most important affected route and systematically document what you find.";
 
-  const { text } = await generateText({
-    model,
-    tools,
-    stopWhen: stepCountIs(maxSteps),
-    system: prompt,
-    prompt: "Begin exploring the application. Start by navigating to the most important affected route and systematically document what you find.",
-  });
+  const text = await client.generateText({ system, prompt, tools, maxSteps });
 
   const partialReport = _getReport();
   const recommendedFlow: string[] = [];

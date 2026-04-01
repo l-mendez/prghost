@@ -75,7 +75,15 @@ export class ActionExecutor {
 
   private async executeClick(selector: string): Promise<void> {
     await sleep(getClickPause(this.timing));
-    await this.cursor.click(selector);
+    try {
+      await this.cursor.click(selector);
+    } catch (e) {
+      if (String(e).includes("strict mode violation") || String(e).includes("resolved to")) {
+        await this.page.locator(selector).first().click();
+      } else {
+        throw e;
+      }
+    }
   }
 
   private async executeType(selector: string, text: string, clearFirst?: boolean): Promise<void> {
@@ -117,7 +125,16 @@ export class ActionExecutor {
 
   private async executeHover(selector: string): Promise<void> {
     await sleep(getClickPause(this.timing));
-    await this.cursor.moveTo(selector);
+    try {
+      await this.cursor.moveTo(selector);
+    } catch (e) {
+      if (String(e).includes("strict mode violation") || String(e).includes("resolved to")) {
+        const box = await this.page.locator(selector).first().boundingBox();
+        if (box) await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      } else {
+        throw e;
+      }
+    }
     await sleep(300);
   }
 

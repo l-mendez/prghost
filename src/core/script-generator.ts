@@ -1,8 +1,7 @@
 // src/core/script-generator.ts
-import { generateObject } from "ai";
-import type { LanguageModel } from "ai";
 import { walkthroughScriptSchema } from "../ai/parsers.js";
 import { buildWalkthroughPlanPrompt } from "../ai/prompts/walkthrough-plan.js";
+import type { AIClient } from "../ai/client.js";
 import type { DiffAnalysis, ReconReport, WalkthroughScript } from "../types/index.js";
 
 interface ScriptGeneratorOptions {
@@ -12,7 +11,7 @@ interface ScriptGeneratorOptions {
 }
 
 export async function generateWalkthroughScript(
-  model: LanguageModel,
+  client: AIClient,
   recon: ReconReport,
   diff: DiffAnalysis,
   options: ScriptGeneratorOptions,
@@ -22,16 +21,14 @@ export async function generateWalkthroughScript(
   );
 
   try {
-    const { object } = await generateObject({ model, schema: walkthroughScriptSchema, prompt });
-    return object;
+    return await client.generateObject({ prompt, schema: walkthroughScriptSchema });
   } catch (firstError) {
     const errorMessage = firstError instanceof Error ? firstError.message : String(firstError);
     try {
-      const { object } = await generateObject({
-        model, schema: walkthroughScriptSchema,
+      return await client.generateObject({
         prompt: `${prompt}\n\n## Previous Attempt Failed\n\nError:\n${errorMessage}\n\nPlease fix and try again.`,
+        schema: walkthroughScriptSchema,
       });
-      return object;
     } catch (secondError) {
       throw new Error(
         `Script generation failed after 2 attempts. Last error: ${secondError instanceof Error ? secondError.message : String(secondError)}`,
