@@ -2,7 +2,7 @@
 import chalk from "chalk";
 import ora from "ora";
 import { writeFile } from "fs/promises";
-import { loadConfig } from "../../config/schema.js";
+import { loadConfig, configExists } from "../../config/schema.js";
 import { createAIClient } from "../../ai/provider.js";
 import { analyzeDiffFromGit } from "../../core/diff-analyzer.js";
 import { fetchPRDiff, fetchPRMetadata } from "../../core/github.js";
@@ -42,6 +42,10 @@ async function runAuthSteps(page: Page, config: import("../../types/index.js").P
 }
 
 export async function runFullPipeline(options: RunOptions): Promise<void> {
+  if (!configExists(process.cwd())) {
+    console.log(chalk.yellow("No config file found. Using defaults. Run `prg init` to customize.\n"));
+  }
+
   const config = await loadConfig(process.cwd(), {
     ...(options.baseUrl ? { baseUrl: options.baseUrl } : {}),
   });

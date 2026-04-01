@@ -143,6 +143,10 @@ async function loadConfigFile(
   return null;
 }
 
+export function configExists(dir: string): boolean {
+  return CONFIG_FILES.some((f) => existsSync(path.join(dir, f)));
+}
+
 export async function loadConfig(
   dir: string,
   cliOverrides?: Partial<PrGhostConfig>,

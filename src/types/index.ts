@@ -25,7 +25,7 @@ export interface PrGhostConfig {
     sectionPause: number;
   };
   ai: {
-    provider: "openai" | "anthropic" | "google";
+    provider: "openai" | "anthropic" | "google" | "claude-code";
     model: string;
     maxExplorationSteps: number;
   };
