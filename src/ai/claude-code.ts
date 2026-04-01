@@ -6,16 +6,22 @@ import type { AIClient, ExplorerToolDef } from "./client.js";
 async function runQuery(prompt: string, maxTurns: number, extraOptions: object = {}): Promise<{ text: string; structured: unknown }> {
   let text = "";
   let structured: unknown = undefined;
-  for await (const message of query({
+  const abortController = new AbortController();
+  const session = query({
     prompt,
-    options: { maxTurns, ...extraOptions },
-  })) {
-    if ("result" in message) {
-      text = typeof message.result === "string" ? message.result : "";
+    options: { maxTurns, abortController, ...extraOptions },
+  });
+  try {
+    for await (const message of session) {
+      if ("result" in message) {
+        text = typeof message.result === "string" ? message.result : "";
+      }
+      if ("structured_output" in message && message.structured_output != null) {
+        structured = message.structured_output;
+      }
     }
-    if ("structured_output" in message && message.structured_output != null) {
-      structured = message.structured_output;
-    }
+  } finally {
+    session.close();
   }
   return { text, structured };
 }
