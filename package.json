@@ -1,5 +1,5 @@
 {
-  "name": "pr-ghost",
+  "name": "@lolomendez/pr-ghost",
   "version": "0.1.0",
   "description": "Automated PR video walkthrough generator",
   "type": "module",
