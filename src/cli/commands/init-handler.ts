@@ -192,7 +192,7 @@ export async function runInit(): Promise<void> {
   },\n`
       : "";
 
-    const configContent = `import type { PrGhostConfig } from "@lolomendez/pr-ghost";
+    const configContent = `import type { PrGhostConfig } from "prghost-cli";
 
 const config: PrGhostConfig = {
 ${devServerBlock}  baseUrl: "${baseUrl}",
