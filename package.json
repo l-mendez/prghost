@@ -1,6 +1,6 @@
 {
   "name": "prghost-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Automated PR video walkthrough generator",
   "type": "module",
   "license": "MIT",
