@@ -2,12 +2,13 @@
 import { walkthroughScriptSchema } from "../ai/parsers.js";
 import { buildWalkthroughPlanPrompt } from "../ai/prompts/walkthrough-plan.js";
 import type { AIClient } from "../ai/client.js";
-import type { DiffAnalysis, ReconReport, WalkthroughScript } from "../types/index.js";
+import type { DiffAnalysis, ReconReport, UXMap, WalkthroughScript } from "../types/index.js";
 
 interface ScriptGeneratorOptions {
   baseUrl: string;
   viewport: { width: number; height: number };
   prMeta?: { number: number; repo: string; title: string };
+  uxMap: UXMap;
 }
 
 export async function generateWalkthroughScript(
@@ -17,7 +18,7 @@ export async function generateWalkthroughScript(
   options: ScriptGeneratorOptions,
 ): Promise<WalkthroughScript> {
   const prompt = buildWalkthroughPlanPrompt(
-    recon, diff, options.baseUrl, options.viewport, options.prMeta,
+    recon, diff, options.uxMap, options.baseUrl, options.viewport, options.prMeta,
   );
 
   try {

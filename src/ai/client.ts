@@ -14,4 +14,6 @@ export interface AIClient {
     tools: Record<string, ExplorerToolDef>;
     maxSteps: number;
   }): Promise<string>;
+  /** Optional: cheap/fast per-file diff summarization. If absent, falls back to single-query UX mapping. */
+  summarizeFileDiff?(filePath: string, category: string, status: string, diff: string): Promise<string>;
 }

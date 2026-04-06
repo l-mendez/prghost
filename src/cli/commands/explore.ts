@@ -85,7 +85,7 @@ export const exploreCommand = new Command("explore")
       // Generate walkthrough script
       spinner = ora("Generating walkthrough script...").start();
       const script = await generateWalkthroughScript(client, recon, diff, {
-        baseUrl, viewport: config.video.viewport, prMeta,
+        baseUrl, viewport: config.video.viewport, prMeta, uxMap,
       });
       spinner.succeed(`Generated script with ${script.steps.length} steps`);
 

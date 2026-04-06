@@ -3,7 +3,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import type { ZodSchema } from "zod";
 import type { AIClient, ExplorerToolDef } from "./client.js";
 
-async function runQuery(prompt: string, maxTurns: number, extraOptions: object = {}): Promise<{ text: string; structured: unknown }> {
+async function runQuery(prompt: string, maxTurns: number, extraOptions: Record<string, unknown> = {}): Promise<{ text: string; structured: unknown }> {
   let text = "";
   let structured: unknown = undefined;
   const abortController = new AbortController();
@@ -26,6 +26,14 @@ async function runQuery(prompt: string, maxTurns: number, extraOptions: object =
   return { text, structured };
 }
 
+async function runLightweightQuery(prompt: string): Promise<string> {
+  const { text } = await runQuery(prompt, 3, {
+    model: "claude-haiku-4-5-20251001",
+    allowedTools: [] as string[],
+  });
+  return text;
+}
+
 export function createClaudeCodeClient(): AIClient {
   return {
     async generateObject<T>({ prompt, schema }: { prompt: string; schema: ZodSchema<T> }): Promise<T> {
@@ -34,7 +42,7 @@ export function createClaudeCodeClient(): AIClient {
         allowedTools: [] as string[],
         outputFormat: { type: "json_schema", schema: jsonSchema },
       };
-      const { structured } = await runQuery(prompt, 5, noToolsOpts);
+      const { structured } = await runQuery(prompt, 10, noToolsOpts);
 
       if (structured != null) {
         return schema.parse(structured);
@@ -67,6 +75,22 @@ export function createClaudeCodeClient(): AIClient {
         disallowedTools: ["Bash", "Write", "Edit", "Read", "Glob", "Grep", "WebSearch", "WebFetch"],
       });
       return text;
+    },
+
+    async summarizeFileDiff(filePath: string, category: string, status: string, diff: string): Promise<string> {
+      const prompt = `You are analyzing a code diff for a single file to summarize its user-visible impact concisely.
+
+File: ${filePath}
+Category: ${category}
+Status: ${status}
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+In 2-4 sentences, describe: what changed, which UI elements or behaviors are affected, and which routes/pages are impacted. Focus only on user-visible changes. If the change has no user-visible impact (e.g. pure refactor, types only, backend logic), say so explicitly.`;
+      return runLightweightQuery(prompt);
     },
   };
 }

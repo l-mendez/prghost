@@ -115,7 +115,7 @@ export async function runFullPipeline(options: RunOptions): Promise<void> {
     // Generate walkthrough script
     spinner = ora("Generating walkthrough script...").start();
     let script = await generateWalkthroughScript(client, recon, diff, {
-      baseUrl, viewport: config.video.viewport, prMeta,
+      baseUrl, viewport: config.video.viewport, prMeta, uxMap,
     });
     spinner.succeed(`Generated script with ${script.steps.length} steps`);
 
@@ -129,7 +129,7 @@ export async function runFullPipeline(options: RunOptions): Promise<void> {
         case "regenerate":
           spinner = ora("Regenerating walkthrough script...").start();
           script = await generateWalkthroughScript(client, recon, diff, {
-            baseUrl, viewport: config.video.viewport, prMeta,
+            baseUrl, viewport: config.video.viewport, prMeta, uxMap,
           });
           spinner.succeed(`Regenerated script with ${script.steps.length} steps`);
           break;
